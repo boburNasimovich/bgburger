@@ -2,7 +2,7 @@
 const firebaseConfig = {
     apiKey: "AIzaSyCDgzdUF3n8rI_9zxs-cFyODn0Df5vxC_U",
     authDomain: "bgburger-savdo.firebaseapp.com",
-    databaseURL: "https://bgburger-savdo-default-rtdb.asia-southeast1.firebasedatabase.app/", 
+    databaseURL: "https://bgburger-savdo-default-rtdb.asia-southeast1.firebasedatabase.app/",
     projectId: "bgburger-savdo",
     storageBucket: "bgburger-savdo.firebasestorage.app",
     messagingSenderId: "916871756784",
@@ -38,12 +38,21 @@ const menuData = {
         { name: "Pepperoni", price: 70000 }, { name: "Go`shtlik", price: 80000 }, { name: "Asarti", price: 90000 }
     ],
     "Tovuq": [
-        { name: "Grill", price: 55000 }, { name: "Kfs (tovuq) 500GR", price: 43000 }, { name: "Kfs (tovuq) 1KG", price: 85000 }
+        { name: "Grill", price: 55000 },
+        { name: "Kfs (tovuq) 500GR", price: 43000 },
+        { name: "Kfs (tovuq) 50000 so'm", price: 50000 },
+        { name: "Kfs (tovuq) 60000 so'm", price: 60000 },
+        { name: "Kfs (tovuq) 70000 so'm", price: 70000 },
+        { name: "Kfs (tovuq) 1KG", price: 85000 }
     ],
     "Ichimliklar": [
-        { name: "Tara 0.25L", price: 5000 }, { name: "Coca-cola 0.5L", price: 8000 },
-        { name: "Coca-cola 1L", price: 13000 }, { name: "Coca-cola 1.5L", price: 16000 },
-        { name: "Fanta 0.5L", price: 8000 }, { name: "Fanta 1L", price: 13000 }, { name: "Fanta 1.5L", price: 16000 }
+        { name: "Tara 0.25L", price: 5000 },
+        { name: "Kofe 1 stakan", price: 5000 },
+        { name: "Choy 1 stakan", price: 2000 },
+        { name: "Choy 1 choynak", price: 5000 }
+    ],
+    "Shirinliklar": [
+        { name: "Shirinlik 1 kusok", price: 10000 }
     ]
 };
 
@@ -130,7 +139,7 @@ function updateTotal() {
 function completeSale() {
     if (currentOrder.length === 0) return alert("Savat bo'sh!");
     let saleData = {
-        time: new Date().toISOString(), 
+        time: new Date().toISOString(),
         items: [...currentOrder],
         total: currentOrder.reduce((a, b) => a + b.price, 0)
     };
@@ -186,7 +195,7 @@ function showStats(filter = 'today', showAll = false) {
 function renderStatsUI(filteredSales, filter, showAll) {
     const statsOutput = document.getElementById('stats-output');
     let totalSum = filteredSales.reduce((sum, s) => sum + s.total, 0);
-    
+
     const filterNames = { 'today': 'BUGUNGI', 'week': 'HAFTALIK', 'month': 'OYLIK', 'all': 'UMUMIY' };
     let currentFilterName = filterNames[filter] || filter.toUpperCase();
 
