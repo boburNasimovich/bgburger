@@ -9,7 +9,6 @@ const firebaseConfig = {
     appId: "1:916871756784:web:dc992046e491da5500bb35"
 };
 
-// Firebaseni ishga tushirish
 if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
 }
@@ -56,7 +55,16 @@ const menuData = {
     ]
 };
 
-let currentOrder = [];
+// 3. Global holat (State)
+let orders = {
+    "Olib ketish": [],
+    "1-stol": [],
+    "2-stol": [],
+    "3-stol": [],
+    "4-stol": [],
+    "5-stol": []
+};
+let activeTable = "Olib ketish";
 const adminPassword = "volk1111";
 
 // DOM elementlar
@@ -64,6 +72,11 @@ const menuDiv = document.getElementById('menu-items');
 const categoryDiv = document.getElementById('category-tabs');
 
 // --- SAVDO QISMI ---
+
+function switchTable() {
+    activeTable = document.getElementById('table-number').value;
+    updateTotal();
+}
 
 function renderCategories() {
     if (!categoryDiv) return;
@@ -111,12 +124,12 @@ function renderMenu(category = "all") {
 
 function addToOrder(item) {
     const orderItem = { ...item, orderId: Date.now() + Math.random() };
-    currentOrder.push(orderItem);
+    orders[activeTable].push(orderItem); 
     updateTotal();
 }
 
 function removeFromOrder(id) {
-    currentOrder = currentOrder.filter(item => item.orderId !== id);
+    orders[activeTable] = orders[activeTable].filter(item => item.orderId !== id);
     updateTotal();
 }
 
@@ -124,9 +137,11 @@ function updateTotal() {
     const cartList = document.getElementById('cart-list');
     const totalSumLabel = document.getElementById('total-sum');
     if (!cartList) return;
+    
     cartList.innerHTML = "";
     let sum = 0;
-    currentOrder.forEach((item) => {
+    
+    orders[activeTable].forEach((item) => {
         let li = document.createElement('li');
         li.className = "cart-item";
         li.innerHTML = `<span>${item.name}</span><span><b>${item.price.toLocaleString()}</b> <button onclick="removeFromOrder(${item.orderId})" style="color:red; border:none; background:none; cursor:pointer; font-size:18px;">✖</button></span>`;
@@ -134,20 +149,39 @@ function updateTotal() {
         sum += item.price;
     });
     totalSumLabel.innerText = sum.toLocaleString();
+    updateTableIndicator();
+}
+
+function updateTableIndicator() {
+    const select = document.getElementById('table-number');
+    for (let i = 0; i < select.options.length; i++) {
+        let val = select.options[i].value;
+        if (orders[val].length > 0) {
+            select.options[i].text = val + " (⏳)";
+        } else {
+            select.options[i].text = val;
+        }
+    }
 }
 
 function completeSale() {
-    if (currentOrder.length === 0) return alert("Savat bo'sh!");
-    let saleData = {
-        time: new Date().toISOString(),
-        items: [...currentOrder],
-        total: currentOrder.reduce((a, b) => a + b.price, 0)
-    };
-    database.ref('sales').push(saleData).then(() => {
-        alert("Sotuv muvaffaqiyatli saqlandi!");
-        currentOrder = [];
-        updateTotal();
-    }).catch(err => alert("Xato: " + err.message));
+    const currentTableOrder = orders[activeTable];
+    if (currentTableOrder.length === 0) return alert("Savat bo'sh!");
+    
+    if (confirm(`${activeTable} uchun to'lov qabul qilindimi?`)) {
+        let saleData = {
+            time: new Date().toISOString(), 
+            items: [...currentTableOrder],
+            total: currentTableOrder.reduce((a, b) => a + b.price, 0),
+            tableName: activeTable
+        };
+        
+        database.ref('sales').push(saleData).then(() => {
+            alert("Sotuv muvaffaqiyatli saqlandi!");
+            orders[activeTable] = []; 
+            updateTotal();
+        }).catch(err => alert("Xato: " + err.message));
+    }
 }
 
 // --- ADMIN VA HISOBOT QISMI ---
@@ -165,15 +199,6 @@ function toggleAdmin() {
 function showStats(filter = 'today', showAll = false) {
     const statsOutput = document.getElementById('stats-output');
     if (!statsOutput) return;
-
-    // Tugmalarning rangini to'g'rilash
-    const filterButtons = document.querySelectorAll('.filter-group button');
-    filterButtons.forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.getAttribute('onclick').includes(`'${filter}'`)) {
-            btn.classList.add('active');
-        }
-    });
 
     database.ref('sales').on('value', (snapshot) => {
         const data = snapshot.val();
@@ -195,16 +220,14 @@ function showStats(filter = 'today', showAll = false) {
 function renderStatsUI(filteredSales, filter, showAll) {
     const statsOutput = document.getElementById('stats-output');
     let totalSum = filteredSales.reduce((sum, s) => sum + s.total, 0);
-
     const filterNames = { 'today': 'BUGUNGI', 'week': 'HAFTALIK', 'month': 'OYLIK', 'all': 'UMUMIY' };
     let currentFilterName = filterNames[filter] || filter.toUpperCase();
 
     let output = `
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 12px; margin-bottom: 20px; border-left: 5px solid #28a745; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-            <span style="font-size: 12px; color: #888; font-weight: bold;">${currentFilterName} HISOBOTI</span>
-            <h2 style="color:#28a745; margin: 5px 0 0 0; font-size: 26px;">${totalSum.toLocaleString()} <small style="font-size:14px;">so'm</small></h2>
-        </div>
-        <b style="display: block; margin-bottom: 10px; color: #444;">Sotuvlar tarixi:</b>`;
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 12px; margin-bottom: 20px; border-left: 5px solid #28a745;">
+            <span style="font-size: 11px; color: #888;">${currentFilterName} TUSHUM</span>
+            <h2 style="color:#28a745; margin: 0;">${totalSum.toLocaleString()} so'm</h2>
+        </div>`;
 
     let displayList = filteredSales.slice().reverse();
     let limit = 10;
@@ -212,43 +235,41 @@ function renderStatsUI(filteredSales, filter, showAll) {
 
     listToRender.forEach(s => {
         let itemNames = s.items ? s.items.map(i => i.name).join(", ") : "Noma'lum";
+        let tableLabel = s.tableName || "Olib ketish";
         let timeStr = new Date(s.time).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
 
         output += `
-            <div style="background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+            <div style="background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
                 <div style="flex: 1;">
-                    <span style="font-size: 11px; color: #aaa;">${timeStr}</span><br>
-                    <b style="font-size: 16px; color: #333;">${s.total.toLocaleString()} so'm</b><br>
-                    <div style="font-size: 12px; color: #777; margin-top: 2px;">${itemNames}</div>
+                    <span style="font-size: 11px; color: #aaa;">${timeStr} — <b style="color:#007bff">${tableLabel}</b></span><br>
+                    <b style="font-size: 15px;">${s.total.toLocaleString()} so'm</b><br>
+                    <div style="font-size: 12px; color: #777;">${itemNames}</div>
                 </div>
-                <button onclick="deleteSale('${s.id}')" 
-                        style="background: #fff5f5; border: 1px solid #fed7d7; color: #e53e3e; padding: 10px; border-radius: 10px; cursor: pointer; font-size: 18px;">
-                    🗑️
-                </button>
+                <button onclick="deleteSale('${s.id}')" style="background:none; border:none; cursor:pointer; font-size:18px;">🗑️</button>
             </div>`;
     });
 
     if (filteredSales.length > limit) {
-        let btnText = showAll ? "Qisqartirish ↑" : `Barchasini ko'rsatish (${filteredSales.length}) ↓`;
-        output += `<button onclick="showStats('${filter}', ${!showAll})" style="width:100%; border:1px solid #ddd; background: white; color:#555; padding:12px; margin-top:10px; border-radius:10px; cursor:pointer; font-weight:bold;">${btnText}</button>`;
+        let btnText = showAll ? "Qisqartirish ↑" : `Barchasini ko'rsatish ↓`;
+        output += `<button onclick="showStats('${filter}', ${!showAll})" style="width:100%; padding:10px; margin-top:5px; cursor:pointer;">${btnText}</button>`;
     }
-
-    statsOutput.innerHTML = filteredSales.length > 0 ? output : "<p style='text-align:center; color:#999; padding:20px;'>Hozircha ma'lumot yo'q.</p>";
+    statsOutput.innerHTML = output;
 }
 
 function deleteSale(saleId) {
-    if (confirm("Ushbu sotuvni o'chirib tashlamoqchimisiz?")) {
-        database.ref('sales/' + saleId).remove();
-    }
+    if (confirm("O'chirilsinmi?")) database.ref('sales/' + saleId).remove();
 }
-
 function clearHistory() {
-    if (confirm("BUTUN TARIX o'chib ketadi. Ishonchingiz komilmi?")) {
-        database.ref('sales').remove();
+    // Faqat admin paroli bilan kirganidan keyin ishlashi uchun qo'shimcha xavfsizlik
+    if (confirm("DIQQAT! Barcha sotuvlar tarixi butunlay o'chib ketadi. Bu amalni ortga qaytarib bo'lmaydi. Rozimisiz?")) {
+        database.ref('sales').remove()
+            .then(() => {
+                alert("Barcha tarix muvaffaqiyatli tozalandi!");
+                showStats('all'); // Hisobotni yangilash
+            })
+            .catch(err => alert("Xato yuz berdi: " + err.message));
     }
 }
-
-// Qidiruv funksiyasi
 function filterMenu() {
     let text = document.getElementById('search-input').value.toLowerCase();
     let allItems = [];
@@ -264,6 +285,5 @@ function filterMenu() {
     });
 }
 
-// Ishga tushirish
 renderCategories();
 renderMenu("all");

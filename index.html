@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Bigburger App</title>
     <link rel="stylesheet" href="style.css">
-    
+
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 </head>
@@ -17,24 +17,37 @@
         <h1>Bigburger Savdo</h1>
 
         <div style="margin-bottom: 15px;">
-            <input type="text" id="search-input" oninput="filterMenu()" placeholder="Mahsulot qidirish..." 
-                   style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd;">
+            <input type="text" id="search-input" oninput="filterMenu()" placeholder="Mahsulot qidirish..."
+                style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd;">
         </div>
 
         <div class="category-container">
             <div id="category-tabs" class="category-tabs">
-                </div>
+            </div>
+        </div>
+        <div class="table-selector" style="margin: 15px 0;">
+            <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #444;">Stolni
+                tanlang:</label>
+            <select id="table-number" onchange="switchTable()"
+                style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #007bff; font-size: 16px; outline: none; background: white;">
+                <option value="Olib ketish">Olib ketish (Dostavka)</option>
+                <option value="1-stol">1-stol</option>
+                <option value="2-stol">2-stol</option>
+                <option value="3-stol">3-stol</option>
+                <option value="4-stol">4-stol</option>
+                <option value="5-stol">5-stol</option>
+            </select>
         </div>
 
         <div id="staff-section">
             <div id="menu-items">
-                </div>
-            
+            </div>
             <hr>
+
             <h3>Savat:</h3>
             <ul id="cart-list" style="list-style: none; padding: 0;">
-                </ul>
-            
+            </ul>
+
             <div style="background: #f8f9fa; padding: 15px; border-radius: 10px; margin: 10px 0;">
                 <h3 style="margin: 0;">Jami: <span id="total-sum">0</span> so'm</h3>
             </div>
@@ -48,12 +61,15 @@
         <hr>
 
         <div id="admin-section">
-            <button onclick="toggleAdmin()" id="admin-btn" style="width: 100%; background: #6c757d;">Admin Paneli</button>
-            
-            <div id="admin-data" style="display: none; margin-top: 20px; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
+            <button onclick="toggleAdmin()" id="admin-btn" style="width: 100%; background: #6c757d;">Admin
+                Paneli</button>
+
+            <div id="admin-data"
+                style="display: none; margin-top: 20px; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1);">
                 <h3>Hisobotlar Paneli</h3>
 
-                <div class="filter-group" style="display: flex; gap: 5px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 10px;">
+                <div class="filter-group"
+                    style="display: flex; gap: 5px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 10px;">
                     <button onclick="showStats('today')" class="cat-btn active">Bugun</button>
                     <button onclick="showStats('week')" class="cat-btn">Shu hafta</button>
                     <button onclick="showStats('month')" class="cat-btn">Shu oy</button>
@@ -61,10 +77,11 @@
                 </div>
 
                 <div id="stats-output">
-                    </div>
-                
+                </div>
+
                 <hr>
-                <button onclick="clearHistory()" class="btn-cancel" style="background: #333; width: 100%;">Butun tarixni o'chirish</button>
+                <button onclick="clearHistory()" class="btn-cancel" style="background: #333; width: 100%;">Butun tarixni
+                    o'chirish</button>
             </div>
         </div>
     </div>
