@@ -52,12 +52,11 @@
             <label style="display: block; font-weight: bold; margin-bottom: 5px; color: #444;">Stolni tanlang:</label>
             <select id="table-number" onchange="switchTable()"
                 style="width: 100%; padding: 12px; border-radius: 10px; border: 2px solid #007bff; font-size: 16px; outline: none; background: white;">
-                <option value="Olib ketish">Olib ketish (Dostavka)</option>
                 <option value="1-stol">1-stol</option>
                 <option value="2-stol">2-stol</option>
                 <option value="3-stol">3-stol</option>
                 <option value="4-stol">4-stol</option>
-                <option value="5-stol">5-stol</option>
+                <option value="Olib ketish">Olib ketish (Dostavka)</option>
             </select>
         </div>
 
@@ -74,6 +73,14 @@
             </div>
 
             <div style="display: flex; gap: 10px; flex-direction: column;">
+                <div style="margin: 10px 0;">
+                    <label style="font-weight: bold; color: #444;">To'lov turi:</label>
+                    <select id="payment-method"
+                        style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #007bff; margin-top: 5px;">
+                        <option value="naqd">💵 Naqd pul</option>
+                        <option value="karta">💳 Plastik karta (Uzcard/Humo)</option>
+                    </select>
+                </div>
                 <button onclick="completeSale()" class="btn-success"
                     style="padding: 15px; font-size: 18px;">Sotish</button>
                 <button onclick="orders[activeTable]=[]; updateTotal();" class="btn-cancel"

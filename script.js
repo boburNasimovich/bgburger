@@ -166,20 +166,24 @@ function updateTableIndicator() {
 
 function completeSale() {
     const currentTableOrder = orders[activeTable];
+    const paymentMethod = document.getElementById('payment-method').value; // Tanlangan tur
+
     if (currentTableOrder.length === 0) return alert("Savat bo'sh!");
     
-    if (confirm(`${activeTable} uchun to'lov qabul qilindimi?`)) {
+    if (confirm(`${activeTable} uchun ${paymentMethod} orqali to'lov qabul qilindimi?`)) {
         let saleData = {
-            time: new Date().toISOString(), 
+            time: new Date().toISOString(),
             items: [...currentTableOrder],
             total: currentTableOrder.reduce((a, b) => a + b.price, 0),
-            tableName: activeTable
+            tableName: activeTable,
+            paymentMethod: paymentMethod // Naqd yoki Karta
         };
         
         database.ref('sales').push(saleData).then(() => {
-            alert("Sotuv muvaffaqiyatli saqlandi!");
+            alert("Sotuv muvaffaqiyatli saqlandi! ✅");
             orders[activeTable] = []; 
             updateTotal();
+            if(typeof showStats === "function") showStats(); // Hisobotni yangilash
         }).catch(err => alert("Xato: " + err.message));
     }
 }
@@ -397,10 +401,11 @@ const telegramConfig = {
 };
 
 async function sendDailyReportToTelegram() {
+    // 1. Ma'lumotlarni bazadan olish
     database.ref('sales').once('value', async (snapshot) => {
         const salesData = snapshot.val() || {};
         
-        // Rasxodlarni ham olish (hisobot to'liq bo'lishi uchun)
+        // Rasxodlarni ham parallel ravishda olamiz
         const expSnapshot = await database.ref('expenses').once('value');
         const expData = expSnapshot.val() || {};
 
@@ -410,24 +415,38 @@ async function sendDailyReportToTelegram() {
         let now = new Date();
         let todayStr = now.toDateString();
 
+        // 2. Faqat bugungi ma'lumotlarni saralash
         let todaySales = sales.filter(s => new Date(s.time).toDateString() === todayStr);
         let todayExp = expenses.filter(e => new Date(e.time).toDateString() === todayStr);
 
-        let totalSum = todaySales.reduce((sum, s) => sum + s.total, 0);
-        let totalExp = todayExp.reduce((sum, e) => sum + e.amount, 0);
-        let netProfit = totalSum - totalExp;
+        // 3. To'lov turlari bo'yicha hisoblash
+        let totalCash = todaySales
+            .filter(s => s.paymentMethod === 'naqd' || !s.paymentMethod) // paymentMethod bo'lmasa 'naqd' deb olamiz
+            .reduce((sum, s) => sum + s.total, 0);
 
-        // Telegram xabari dizayni
-        let message = `📊 *BUGUNGI HISOBOT* \n`;
+        let totalCard = todaySales
+            .filter(s => s.paymentMethod === 'karta')
+            .reduce((sum, s) => sum + s.total, 0);
+
+        let totalSum = totalCash + totalCard; // Umumiy tushum
+        let totalExpAmount = todayExp.reduce((sum, e) => sum + e.amount, 0); // Jami rasxod
+        let netProfit = totalSum - totalExpAmount; // Sof foyda
+
+        // 4. Telegram xabari matni (Markdown formatida)
+        let message = `📊 *BUGUNGI YAKUNIY HISOBOT*\n`;
         message += `📅 Sana: ${now.toLocaleDateString('uz-UZ')}\n`;
         message += `━━━━━━━━━━━━━━━\n`;
-        message += `💰 Savdo: *${totalSum.toLocaleString()} so'm*\n`;
-        message += `💸 Rasxod: *${totalExp.toLocaleString()} so'm*\n`;
-        message += `💵 Sof foyda: *${netProfit.toLocaleString()} so'm*\n`;
+        message += `💵 Naqd tushum: *${totalCash.toLocaleString()} so'm*\n`;
+        message += `💳 Karta orqali: *${totalCard.toLocaleString()} so'm*\n`;
+        message += `💰 Jami Savdo: *${totalSum.toLocaleString()} so'm*\n`;
         message += `━━━━━━━━━━━━━━━\n`;
+        message += `💸 Jami Rasxod: *${totalExpAmount.toLocaleString()} so'm*\n`;
+        message += `━━━━━━━━━━━━━━━\n`;
+        message += `💵 *SOF FOYDA: ${netProfit.toLocaleString()} so'm*\n\n`;
         message += `🛒 Sotuvlar soni: ${todaySales.length} ta\n`;
-        message += `🚀 Tizim: Bigburger App`;
+        message += `🚀 Bigburger App tizimi`;
 
+        // 5. Telegram API orqali yuborish
         const url = `https://api.telegram.org/bot${telegramConfig.token}/sendMessage`;
 
         try {
@@ -446,13 +465,12 @@ async function sendDailyReportToTelegram() {
             if (response.ok) {
                 alert("Hisobot Telegramga yuborildi! ✅");
             } else {
-                // Telegram qaytargan aniq xatoni ko'rsatish
-                console.error("Telegram xatosi:", result);
-                alert("Telegram xatosi: " + result.description);
+                console.error("Telegram error:", result);
+                alert("Xato: " + (result.description || "Yuborib bo'lmadi"));
             }
         } catch (err) {
-            console.error("Tarmoq xatosi:", err);
-            alert("Internet yoki ulanishda xato!");
+            console.error("Fetch error:", err);
+            alert("Internet aloqasini tekshiring!");
         }
     });
 }
