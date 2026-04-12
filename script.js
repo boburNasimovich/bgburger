@@ -200,70 +200,136 @@ function showStats(filter = 'today', showAll = false) {
     const statsOutput = document.getElementById('stats-output');
     if (!statsOutput) return;
 
-    // Tugmalarning vizual 'active' holatini yangilash
+    // Tugmalar rangini yangilash
     const filterButtons = document.querySelectorAll('.filter-group button');
     filterButtons.forEach(btn => {
         btn.classList.remove('active');
-        // Tugmadagi onclick matniga qarab tanlanganini aniqlash
         if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(`'${filter}'`)) {
             btn.classList.add('active');
         }
     });
 
-    database.ref('sales').on('value', (snapshot) => {
-        const data = snapshot.val();
+    // 1. Sotuvlarni olish
+    database.ref('sales').once('value', (salesSnapshot) => {
+        const salesData = salesSnapshot.val() || {};
         let sales = [];
-        for (let key in data) sales.push({ id: key, ...data[key] });
+        for (let key in salesData) sales.push({ id: key, ...salesData[key] });
 
-        let now = new Date();
-        let filteredSales = sales.filter(sale => {
-            let saleDate = new Date(sale.time);
-            if (filter === 'today') return saleDate.toDateString() === now.toDateString();
-            if (filter === 'week') return (now - saleDate) / (1000 * 60 * 60 * 24) <= 7;
-            if (filter === 'month') return saleDate.getMonth() === now.getMonth() && saleDate.getFullYear() === now.getFullYear();
-            return true;
+        // 2. Rasxodlarni olish
+        database.ref('expenses').once('value', (expSnapshot) => {
+            const expData = expSnapshot.val() || {};
+            let expenses = [];
+            for (let key in expData) expenses.push({ id: key, ...expData[key] });
+
+            let now = new Date();
+            
+            // Filtrlash mantiqi
+            const filterFn = (item) => {
+                let itemDate = new Date(item.time);
+                if (filter === 'today') return itemDate.toDateString() === now.toDateString();
+                if (filter === 'week') return (now - itemDate) / (1000 * 60 * 60 * 24) <= 7;
+                if (filter === 'month') return itemDate.getMonth() === now.getMonth() && itemDate.getFullYear() === now.getFullYear();
+                return true;
+            };
+
+            let filteredSales = sales.filter(filterFn);
+            let filteredExpenses = expenses.filter(filterFn);
+
+            renderStatsUI(filteredSales, filteredExpenses, filter, showAll);
         });
-        renderStatsUI(filteredSales, filter, showAll);
     });
 }
 
-function renderStatsUI(filteredSales, filter, showAll) {
+function renderStatsUI(filteredSales, filteredExpenses, filter, showAll) {
     const statsOutput = document.getElementById('stats-output');
-    let totalSum = filteredSales.reduce((sum, s) => sum + s.total, 0);
+    
+    let totalSales = filteredSales.reduce((sum, s) => sum + s.total, 0);
+    let totalExp = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+    let netProfit = totalSales - totalExp;
+
     const filterNames = { 'today': 'BUGUNGI', 'week': 'HAFTALIK', 'month': 'OYLIK', 'all': 'UMUMIY' };
     let currentFilterName = filterNames[filter] || filter.toUpperCase();
 
+    // 1. Hisobot Vidjeti
     let output = `
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 12px; margin-bottom: 20px; border-left: 5px solid #28a745;">
-            <span style="font-size: 11px; color: #888;">${currentFilterName} TUSHUM</span>
-            <h2 style="color:#28a745; margin: 0;">${totalSum.toLocaleString()} so'm</h2>
-        </div>`;
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #eee;">
+            <div style="font-size: 11px; color: #888; margin-bottom: 10px; text-align: center; font-weight:bold;">${currentFilterName} QISQA HISOBOT</div>
+            <div style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #28a745; font-weight:500;">💰 Umumiy Savdo:</span>
+                <b style="color: #28a745;">${totalSales.toLocaleString()}</b>
+            </div>
+            <div style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #dc3545; font-weight:500;">💸 Jami Rasxod:</span>
+                <b style="color: #dc3545;">${totalExp.toLocaleString()}</b>
+            </div>
+            <hr style="border: 0; border-top: 1px dashed #ccc;">
+            <div style="display:flex; justify-content: space-between; font-size: 18px; margin-top: 5px;">
+                <span style="font-weight:bold;">💵 Sof Foyda:</span>
+                <b style="color: #007bff;">${netProfit.toLocaleString()} so'm</b>
+            </div>
+        </div>
+    `;
 
+    // 2. Rasxodlar ro'yxati (O'chirish tugmasi bilan)
+    output += `<h4>Xarajatlar tafsiloti:</h4>`;
+    if (filteredExpenses.length === 0) {
+        output += `<p style="color:#888; font-size:12px;">Rasxodlar yo'q.</p>`;
+    } else {
+        filteredExpenses.reverse().forEach(e => {
+            output += `
+                <div style="background: #fff5f5; border: 1px solid #ffebeb; padding: 10px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid #dc3545; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <b style="font-size:14px;">${e.reason}</b><br>
+                        <small style="color:#999;">${new Date(e.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</small>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <b style="color:#dc3545;">-${e.amount.toLocaleString()}</b>
+                        <button onclick="deleteExpense('${e.id}')" style="background:none; border:none; cursor:pointer; font-size:16px;">🗑️</button>
+                    </div>
+                </div>`;
+        });
+    }
+
+    // 3. Savdolar ro'yxati (O'chirish tugmasi bilan)
+    output += `<h4 style="margin-top:20px;">Savdolar tafsiloti:</h4>`;
     let displayList = filteredSales.slice().reverse();
     let limit = 10;
     let listToRender = (!showAll && displayList.length > limit) ? displayList.slice(0, limit) : displayList;
 
     listToRender.forEach(s => {
-        let itemNames = s.items ? s.items.map(i => i.name).join(", ") : "Noma'lum";
-        let tableLabel = s.tableName || "Olib ketish";
-        let timeStr = new Date(s.time).toLocaleTimeString('uz-UZ', { hour: '2-digit', minute: '2-digit' });
-
+        let timeStr = new Date(s.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         output += `
-            <div style="background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                <div style="flex: 1;">
-                    <span style="font-size: 11px; color: #aaa;">${timeStr} — <b style="color:#007bff">${tableLabel}</b></span><br>
-                    <b style="font-size: 15px;">${s.total.toLocaleString()} so'm</b><br>
-                    <div style="font-size: 12px; color: #777;">${itemNames}</div>
+            <div style="background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 12px; margin-bottom: 8px; border-left: 4px solid #007bff; display:flex; justify-content:space-between; align-items:center;">
+                <div style="flex:1;">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                        <span style="font-size: 12px; color: #aaa;">${timeStr} - <b>${s.tableName}</b></span>
+                        <b style="color:#333;">${s.total.toLocaleString()} so'm</b>
+                    </div>
+                    <div style="font-size: 12px; color: #777;">${s.items ? s.items.map(i => i.name).join(", ") : "Noma'lum"}</div>
                 </div>
-                <button onclick="deleteSale('${s.id}')" style="background:none; border:none; cursor:pointer; font-size:18px;">🗑️</button>
+                <button onclick="deleteSale('${s.id}')" style="background:none; border:none; cursor:pointer; font-size:18px; margin-left:10px;">🗑️</button>
             </div>`;
     });
 
     if (filteredSales.length > limit) {
-        let btnText = showAll ? "Qisqartirish ↑" : `Barchasini ko'rsatish ↓`;
-        output += `<button onclick="showStats('${filter}', ${!showAll})" style="width:100%; padding:10px; margin-top:5px; cursor:pointer; border: 1px solid #ddd; background: white; border-radius: 8px;">${btnText}</button>`;
+        let btnText = showAll ? "Qisqartirish ↑" : "Barchasini ko'rsatish ↓";
+        output += `<button onclick="showStats('${filter}', ${!showAll})" style="width:100%; padding:10px; margin-top:5px; cursor:pointer; background:#f0f0f0; border:none; border-radius:8px; font-weight:500;">${btnText}</button>`;
     }
+
     statsOutput.innerHTML = output;
+}
+
+// O'chirish funksiyalari
+function deleteSale(id) {
+    if (confirm("Ushbu savdo tarixdan o'chirilsinmi?")) {
+        database.ref('sales/' + id).remove().then(() => showStats());
+    }
+}
+
+function deleteExpense(id) {
+    if (confirm("Ushbu xarajat o'chirilsinmi?")) {
+        database.ref('expenses/' + id).remove().then(() => showStats());
+    }
 }
 
 function deleteSale(saleId) {
@@ -297,7 +363,99 @@ function filterMenu() {
         menuDiv.appendChild(btn);
     });
 }
+// Modalni ochish va yopish
+function openExpenseModal() {
+    document.getElementById('expense-modal').style.display = 'flex';
+}
+function closeExpenseModal() {
+    document.getElementById('expense-modal').style.display = 'none';
+    document.getElementById('exp-amount').value = '';
+    document.getElementById('exp-reason').value = '';
+}
 
+// Rasxodni Firebase-ga saqlash
+function saveExpense() {
+    const amount = document.getElementById('exp-amount').value;
+    const reason = document.getElementById('exp-reason').value;
+
+    if (!amount || !reason) return alert("Hamma maydonni toldiring!");
+
+    const expenseData = {
+        amount: parseInt(amount),
+        reason: reason,
+        time: new Date().toISOString()
+    };
+
+    database.ref('expenses').push(expenseData).then(() => {
+        alert("Xarajat saqlandi!");
+        closeExpenseModal();
+    }).catch(err => alert("Xato: " + err.message));
+}
+const telegramConfig = {
+    token: "8232650087:AAEQtCj3DkXlrb8NxdeGPyklgbJamyD4Hy8", 
+    adminChatId: "983089996"
+};
+
+async function sendDailyReportToTelegram() {
+    database.ref('sales').once('value', async (snapshot) => {
+        const salesData = snapshot.val() || {};
+        
+        // Rasxodlarni ham olish (hisobot to'liq bo'lishi uchun)
+        const expSnapshot = await database.ref('expenses').once('value');
+        const expData = expSnapshot.val() || {};
+
+        let sales = Object.values(salesData);
+        let expenses = Object.values(expData);
+
+        let now = new Date();
+        let todayStr = now.toDateString();
+
+        let todaySales = sales.filter(s => new Date(s.time).toDateString() === todayStr);
+        let todayExp = expenses.filter(e => new Date(e.time).toDateString() === todayStr);
+
+        let totalSum = todaySales.reduce((sum, s) => sum + s.total, 0);
+        let totalExp = todayExp.reduce((sum, e) => sum + e.amount, 0);
+        let netProfit = totalSum - totalExp;
+
+        // Telegram xabari dizayni
+        let message = `📊 *BUGUNGI HISOBOT* \n`;
+        message += `📅 Sana: ${now.toLocaleDateString('uz-UZ')}\n`;
+        message += `━━━━━━━━━━━━━━━\n`;
+        message += `💰 Savdo: *${totalSum.toLocaleString()} so'm*\n`;
+        message += `💸 Rasxod: *${totalExp.toLocaleString()} so'm*\n`;
+        message += `💵 Sof foyda: *${netProfit.toLocaleString()} so'm*\n`;
+        message += `━━━━━━━━━━━━━━━\n`;
+        message += `🛒 Sotuvlar soni: ${todaySales.length} ta\n`;
+        message += `🚀 Tizim: Bigburger App`;
+
+        const url = `https://api.telegram.org/bot${telegramConfig.token}/sendMessage`;
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: telegramConfig.adminChatId,
+                    text: message,
+                    parse_mode: "Markdown"
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                alert("Hisobot Telegramga yuborildi! ✅");
+            } else {
+                // Telegram qaytargan aniq xatoni ko'rsatish
+                console.error("Telegram xatosi:", result);
+                alert("Telegram xatosi: " + result.description);
+            }
+        } catch (err) {
+            console.error("Tarmoq xatosi:", err);
+            alert("Internet yoki ulanishda xato!");
+        }
+    });
+}
 // Ishga tushirish
 renderCategories();
 renderMenu("all");
