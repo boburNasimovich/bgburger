@@ -200,6 +200,16 @@ function showStats(filter = 'today', showAll = false) {
     const statsOutput = document.getElementById('stats-output');
     if (!statsOutput) return;
 
+    // Tugmalarning vizual 'active' holatini yangilash
+    const filterButtons = document.querySelectorAll('.filter-group button');
+    filterButtons.forEach(btn => {
+        btn.classList.remove('active');
+        // Tugmadagi onclick matniga qarab tanlanganini aniqlash
+        if (btn.getAttribute('onclick') && btn.getAttribute('onclick').includes(`'${filter}'`)) {
+            btn.classList.add('active');
+        }
+    });
+
     database.ref('sales').on('value', (snapshot) => {
         const data = snapshot.val();
         let sales = [];
@@ -251,25 +261,28 @@ function renderStatsUI(filteredSales, filter, showAll) {
 
     if (filteredSales.length > limit) {
         let btnText = showAll ? "Qisqartirish ↑" : `Barchasini ko'rsatish ↓`;
-        output += `<button onclick="showStats('${filter}', ${!showAll})" style="width:100%; padding:10px; margin-top:5px; cursor:pointer;">${btnText}</button>`;
+        output += `<button onclick="showStats('${filter}', ${!showAll})" style="width:100%; padding:10px; margin-top:5px; cursor:pointer; border: 1px solid #ddd; background: white; border-radius: 8px;">${btnText}</button>`;
     }
     statsOutput.innerHTML = output;
 }
 
 function deleteSale(saleId) {
-    if (confirm("O'chirilsinmi?")) database.ref('sales/' + saleId).remove();
-}
-function clearHistory() {
-    // Faqat admin paroli bilan kirganidan keyin ishlashi uchun qo'shimcha xavfsizlik
-    if (confirm("DIQQAT! Barcha sotuvlar tarixi butunlay o'chib ketadi. Bu amalni ortga qaytarib bo'lmaydi. Rozimisiz?")) {
-        database.ref('sales').remove()
-            .then(() => {
-                alert("Barcha tarix muvaffaqiyatli tozalandi!");
-                showStats('all'); // Hisobotni yangilash
-            })
-            .catch(err => alert("Xato yuz berdi: " + err.message));
+    if (confirm("Ushbu sotuv o'chirilsinmi?")) {
+        database.ref('sales/' + saleId).remove();
     }
 }
+
+function clearHistory() {
+    if (confirm("DIQQAT! Barcha sotuvlar tarixi butunlay o'chib ketadi. Rozimisiz?")) {
+        database.ref('sales').remove()
+            .then(() => {
+                alert("Barcha tarix tozalandi!");
+                showStats('today'); 
+            })
+            .catch(err => alert("Xato: " + err.message));
+    }
+}
+
 function filterMenu() {
     let text = document.getElementById('search-input').value.toLowerCase();
     let allItems = [];
@@ -285,5 +298,6 @@ function filterMenu() {
     });
 }
 
+// Ishga tushirish
 renderCategories();
 renderMenu("all");
