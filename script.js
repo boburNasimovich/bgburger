@@ -38,6 +38,8 @@ const menuData = {
     ],
     "Tovuq": [
         { name: "Grill", price: 55000 },
+        { name: "Tandir tovuq 1", price: 50000 },
+        { name: "Tandir tovuq 0.5", price: 25000 },
         { name: "Kfs (tovuq) 500GR", price: 43000 },
         { name: "Kfs (tovuq) 50000 so'm", price: 50000 },
         { name: "Kfs (tovuq) 60000 so'm", price: 60000 },
@@ -247,26 +249,49 @@ function showStats(filter = 'today', showAll = false) {
 function renderStatsUI(filteredSales, filteredExpenses, filter, showAll) {
     const statsOutput = document.getElementById('stats-output');
     
-    let totalSales = filteredSales.reduce((sum, s) => sum + s.total, 0);
+    // 1. Hisob-kitoblar
+    let totalCash = filteredSales
+        .filter(s => s.paymentMethod === 'naqd' || !s.paymentMethod)
+        .reduce((sum, s) => sum + s.total, 0);
+
+    let totalCard = filteredSales
+        .filter(s => s.paymentMethod === 'karta')
+        .reduce((sum, s) => sum + s.total, 0);
+
+    let totalSales = totalCash + totalCard;
     let totalExp = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
     let netProfit = totalSales - totalExp;
 
     const filterNames = { 'today': 'BUGUNGI', 'week': 'HAFTALIK', 'month': 'OYLIK', 'all': 'UMUMIY' };
     let currentFilterName = filterNames[filter] || filter.toUpperCase();
 
-    // 1. Hisobot Vidjeti
+    // 2. Vidjet - Eng tepada Naqd va Karta ko'rinadi
     let output = `
         <div style="background: #f8f9fa; padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #eee;">
             <div style="font-size: 11px; color: #888; margin-bottom: 10px; text-align: center; font-weight:bold;">${currentFilterName} QISQA HISOBOT</div>
+            
             <div style="display:flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #28a745; font-weight:500;">💰 Umumiy Savdo:</span>
+                <span style="color: #444;">💵 Naqd pul:</span>
+                <b>${totalCash.toLocaleString()} so'm</b>
+            </div>
+            
+            <div style="display:flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #007bff;">💳 Karta orqali:</span>
+                <b>${totalCard.toLocaleString()} so'm</b>
+            </div>
+
+            <div style="display:flex; justify-content: space-between; margin-bottom: 8px; border-top: 1px solid #ddd; pt-5; margin-top:5px;">
+                <span style="color: #28a745; font-weight:bold;">💰 Jami Savdo:</span>
                 <b style="color: #28a745;">${totalSales.toLocaleString()}</b>
             </div>
+
             <div style="display:flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #dc3545; font-weight:500;">💸 Jami Rasxod:</span>
+                <span style="color: #dc3545;">💸 Jami Rasxod:</span>
                 <b style="color: #dc3545;">${totalExp.toLocaleString()}</b>
             </div>
+
             <hr style="border: 0; border-top: 1px dashed #ccc;">
+            
             <div style="display:flex; justify-content: space-between; font-size: 18px; margin-top: 5px;">
                 <span style="font-weight:bold;">💵 Sof Foyda:</span>
                 <b style="color: #007bff;">${netProfit.toLocaleString()} so'm</b>
@@ -274,12 +299,12 @@ function renderStatsUI(filteredSales, filteredExpenses, filter, showAll) {
         </div>
     `;
 
-    // 2. Rasxodlar ro'yxati (O'chirish tugmasi bilan)
-    output += `<h4>Xarajatlar tafsiloti:</h4>`;
+    // 3. Xarajatlar ro'yxati (Tepadan keyin keladi)
+    output += `<h4 style="margin-bottom:10px;">Xarajatlar tafsiloti:</h4>`;
     if (filteredExpenses.length === 0) {
         output += `<p style="color:#888; font-size:12px;">Rasxodlar yo'q.</p>`;
     } else {
-        filteredExpenses.reverse().forEach(e => {
+        filteredExpenses.slice().reverse().forEach(e => {
             output += `
                 <div style="background: #fff5f5; border: 1px solid #ffebeb; padding: 10px; border-radius: 8px; margin-bottom: 8px; border-left: 4px solid #dc3545; display:flex; justify-content:space-between; align-items:center;">
                     <div>
@@ -294,7 +319,7 @@ function renderStatsUI(filteredSales, filteredExpenses, filter, showAll) {
         });
     }
 
-    // 3. Savdolar ro'yxati (O'chirish tugmasi bilan)
+    // 4. Savdolar ro'yxati (Eng oxirida)
     output += `<h4 style="margin-top:20px;">Savdolar tafsiloti:</h4>`;
     let displayList = filteredSales.slice().reverse();
     let limit = 10;
@@ -302,11 +327,13 @@ function renderStatsUI(filteredSales, filteredExpenses, filter, showAll) {
 
     listToRender.forEach(s => {
         let timeStr = new Date(s.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        let pMethodIcon = s.paymentMethod === 'karta' ? '💳' : '💵';
+        
         output += `
             <div style="background: #fff; border: 1px solid #eee; border-radius: 10px; padding: 12px; margin-bottom: 8px; border-left: 4px solid #007bff; display:flex; justify-content:space-between; align-items:center;">
                 <div style="flex:1;">
                     <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                        <span style="font-size: 12px; color: #aaa;">${timeStr} - <b>${s.tableName}</b></span>
+                        <span style="font-size: 12px; color: #aaa;">${timeStr} - <b>${s.tableName}</b> ${pMethodIcon}</span>
                         <b style="color:#333;">${s.total.toLocaleString()} so'm</b>
                     </div>
                     <div style="font-size: 12px; color: #777;">${s.items ? s.items.map(i => i.name).join(", ") : "Noma'lum"}</div>
