@@ -53,18 +53,19 @@ const menuData = {
         { name: "Choy 1 choynak", price: 5000 }
     ],
     "Shirinliklar": [
-        { name: "Shirinlik 1 kusok", price: 10000 }
+        { name: "Shirinlik 1 kusok", price: 10000 },
+        { name: "Kartoshka fri 1 porsya", price: 10000 }
     ]
 };
 
 // 3. Global holat (State)
 let orders = {
-    "Olib ketish": [],
     "1-stol": [],
     "2-stol": [],
     "3-stol": [],
     "4-stol": [],
-    "5-stol": []
+    "5-stol": [],
+    "Olib ketish": []
 };
 let activeTable = "Olib ketish";
 const adminPassword = "volk1111";

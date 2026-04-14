@@ -38,24 +38,25 @@ body {
 .category-container::-webkit-scrollbar {
     display: none; /* Chrome/Safari uchun */
 }
-
-.cat-btn {
-    display: inline-block;
-    padding: 8px 18px;
-    margin-right: 8px;
-    background-color: #ffffff;
-    color: #007bff;
-    border: 2px solid #007bff;
-    border-radius: 20px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s ease;
+.category-tabs {
+    display: flex;
+    flex-wrap: wrap; /* Tugmalar sig'masa, keyingi qatorga o'tadi */
+    gap: 8px;        /* Tugmalar orasidagi masofa */
+    padding: 10px 0;
 }
-
+.cat-btn {
+    flex: 1 1 calc(33.333% - 8px); /* Har bir qatorda 3 tadan tugma (ixtiyoriy) */
+    min-width: 100px;              /* Tugmaning minimal kengligi */
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: white;
+    cursor: pointer;
+}
 .cat-btn.active {
     background-color: #007bff;
     color: white;
-    box-shadow: 0 3px 6px rgba(0, 123, 255, 0.3);
+    border-color: #007bff;
 }
 
 /* 4. Mahsulotlar (Menyu tugmalari) */
