@@ -67,7 +67,7 @@ let orders = {
     "5-stol": [],
     "Olib ketish": []
 };
-let activeTable = "Olib ketish";
+let activeTable = "1-stol";
 const adminPassword = "volk1111";
 
 // DOM elementlar
@@ -77,8 +77,9 @@ const categoryDiv = document.getElementById('category-tabs');
 // --- SAVDO QISMI ---
 
 function switchTable() {
-    activeTable = document.getElementById('table-number').value;
-    updateTotal();
+    const tableSelect = document.getElementById('table-number');
+    activeTable = tableSelect.value;
+    updateTotal(); // Bu funksiya avtomatik orders[activeTable] ni ko'rsatadi
 }
 
 function renderCategories() {
@@ -168,25 +169,31 @@ function updateTableIndicator() {
 }
 
 function completeSale() {
-    const currentTableOrder = orders[activeTable];
-    const paymentMethod = document.getElementById('payment-method').value; // Tanlangan tur
+    // 1. Hozirgi tanlangan stolni aniq elementdan qayta tekshirib olamiz
+    const tableSelect = document.getElementById('table-number');
+    activeTable = tableSelect.value; 
 
-    if (currentTableOrder.length === 0) return alert("Savat bo'sh!");
+    const currentTableOrder = orders[activeTable];
+    const paymentMethod = document.getElementById('payment-method').value;
+
+    if (!currentTableOrder || currentTableOrder.length === 0) {
+        return alert("Savat bo'sh!");
+    }
     
     if (confirm(`${activeTable} uchun ${paymentMethod} orqali to'lov qabul qilindimi?`)) {
         let saleData = {
             time: new Date().toISOString(),
             items: [...currentTableOrder],
             total: currentTableOrder.reduce((a, b) => a + b.price, 0),
-            tableName: activeTable,
-            paymentMethod: paymentMethod // Naqd yoki Karta
+            tableName: activeTable, // Endi bu aniq tanlangan stolni oladi
+            paymentMethod: paymentMethod 
         };
         
         database.ref('sales').push(saleData).then(() => {
             alert("Sotuv muvaffaqiyatli saqlandi! ✅");
-            orders[activeTable] = []; 
+            orders[activeTable] = []; // Faqat sotilgan stol savatini tozalaymiz
             updateTotal();
-            if(typeof showStats === "function") showStats(); // Hisobotni yangilash
+            if(typeof showStats === "function") showStats('today'); 
         }).catch(err => alert("Xato: " + err.message));
     }
 }
