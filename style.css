@@ -213,3 +213,84 @@ body {
     background: #feb2b2;
     color: #c53030;
 }
+
+/* =========================
+   📱 TABLET (iPad Air 2)
+   ========================= */
+@media (min-width: 768px) {
+
+    .container {
+        max-width: 95%;
+        padding: 25px;
+    }
+
+    h1 {
+        font-size: 28px;
+    }
+
+    /* Category tugmalar */
+    .cat-btn {
+        flex: 1 1 calc(25% - 10px); /* 4 ta qatorda */
+        font-size: 16px;
+        padding: 12px;
+    }
+
+    /* Menu grid 3 ta ustun */
+    #menu-items {
+        grid-template-columns: repeat(3, 1fr);
+        max-height: 500px;
+    }
+
+    .menu-btn {
+        font-size: 16px;
+        padding: 18px;
+    }
+
+    /* Savat */
+    .cart-item {
+        font-size: 16px;
+        padding: 10px 0;
+    }
+
+    /* Buttonlar */
+    .btn-success {
+        font-size: 20px;
+        padding: 18px;
+    }
+
+    .btn-cancel {
+        font-size: 16px;
+        padding: 14px;
+    }
+
+    /* Selectlar */
+    select {
+        font-size: 16px;
+        padding: 12px;
+    }
+
+    /* Admin panel */
+    #stats-output {
+        font-size: 14px;
+    }
+}
+@media (min-width: 1024px) {
+
+    .container {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 20px;
+    }
+
+    #staff-section {
+        grid-column: 1;
+    }
+
+    #admin-section {
+        grid-column: 2;
+    }
+
+    #menu-items {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
