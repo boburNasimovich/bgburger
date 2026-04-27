@@ -48,6 +48,7 @@ const menuData = {
     ],
     "Ichimliklar": [
         { name: "Tara 0.25L", price: 5000 },
+        { name: "Suv gazsiz 0.5L", price: 3000 },
         { name: "Kofe 1 stakan", price: 5000 },
         { name: "Choy 1 stakan", price: 2000 },
         { name: "Choy 1 choynak", price: 5000 }
