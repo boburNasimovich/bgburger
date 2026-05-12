@@ -224,33 +224,40 @@ function showStats(filter = 'today', showAll = false) {
         }
     });
 
-    // 1. Sotuvlarni olish
-    database.ref('sales').once('value', (salesSnapshot) => {
+    let now = new Date();
+    let startTime = null;
+
+    // 1. Vaqt oralig'ini belgilaymiz (Firebase uchun)
+    if (filter === 'today') {
+        startTime = new Date(now.setHours(0,0,0,0)).toISOString();
+    } else if (filter === 'week') {
+        let lastWeek = new Date();
+        lastWeek.setDate(now.getDate() - 7);
+        startTime = lastWeek.toISOString();
+    } else if (filter === 'month') {
+        startTime = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    }
+
+    // 2. Firebase so'rovini optimallashtirilgan holatda shakllantiramiz
+    let salesRef = database.ref('sales');
+    let expensesRef = database.ref('expenses');
+
+    // Agar filtr 'all' bo'lsa hamma narsani oladi, aks holda vaqt bo'yicha bazadan qirqib oladi
+    let salesQuery = (filter === 'all' || !startTime) ? salesRef : salesRef.orderByChild('time').startAt(startTime);
+    let expQuery = (filter === 'all' || !startTime) ? expensesRef : expensesRef.orderByChild('time').startAt(startTime);
+
+    // 3. Sotuvlarni olish
+    salesQuery.once('value', (salesSnapshot) => {
         const salesData = salesSnapshot.val() || {};
-        let sales = [];
-        for (let key in salesData) sales.push({ id: key, ...salesData[key] });
+        let sales = Object.keys(salesData).map(key => ({ id: key, ...salesData[key] }));
 
-        // 2. Rasxodlarni olish
-        database.ref('expenses').once('value', (expSnapshot) => {
+        // 4. Rasxodlarni olish
+        expQuery.once('value', (expSnapshot) => {
             const expData = expSnapshot.val() || {};
-            let expenses = [];
-            for (let key in expData) expenses.push({ id: key, ...expData[key] });
-
-            let now = new Date();
+            let expenses = Object.keys(expData).map(key => ({ id: key, ...expData[key] }));
             
-            // Filtrlash mantiqi
-            const filterFn = (item) => {
-                let itemDate = new Date(item.time);
-                if (filter === 'today') return itemDate.toDateString() === now.toDateString();
-                if (filter === 'week') return (now - itemDate) / (1000 * 60 * 60 * 24) <= 7;
-                if (filter === 'month') return itemDate.getMonth() === now.getMonth() && itemDate.getFullYear() === now.getFullYear();
-                return true;
-            };
-
-            let filteredSales = sales.filter(filterFn);
-            let filteredExpenses = expenses.filter(filterFn);
-
-            renderStatsUI(filteredSales, filteredExpenses, filter, showAll);
+            // UI-ni chizishga yuboramiz
+            renderStatsUI(sales, expenses, filter, showAll);
         });
     });
 }
